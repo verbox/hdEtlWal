@@ -1,0 +1,13 @@
+Interfejsy (Michał)
+- wyciągane danych z banku
+- wrzucanie do bazy
+
+(Piotrek)
+- wyciąganie z bazy
+- widok
+- wersja papierowa
+
+(Monika)
+- dane z arkuszy Excela
+
+
