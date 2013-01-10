@@ -44,21 +44,31 @@ public class CurrencyXLSParser extends AbstractErrorReporter {
 					String currencyValue = cell2.getContents();
 					if (StringUtils.isNotEmpty(currencyValue) && StringUtils.contains(currencyValue, ",") && cell2.getColumn() < 14) {
 						BigDecimal decimalValue = new BigDecimal(currencyValue.replaceAll(",", "."));
-
-						Currency currency = new Currency();
-						currency.setCurrencyCode(currencyCode);
-						currency.setValue(decimalValue);
-
-						Calendar calendar = Calendar.getInstance();
-						calendar.set(Calendar.YEAR, Integer.valueOf(year));
-						calendar.set(Calendar.MONTH, cell2.getColumn() - 2);
-						calendar.set(Calendar.DAY_OF_MONTH, 1);
-						calendar.set(Calendar.HOUR_OF_DAY, 0);
-						calendar.set(Calendar.MINUTE, 0);
-						calendar.set(Calendar.SECOND, 0);
-						currency.setDate(calendar.getTime());
 						
-						resultList.add(currency);
+						String[] splittedCurrency = currencyCode.split(" ");
+						if(splittedCurrency.length == 2)
+						{
+							Currency currency = new Currency();
+							
+							BigDecimal divider = new BigDecimal(splittedCurrency[0]);
+							decimalValue = decimalValue.divide(divider);
+							currency.setCurrencyCode(splittedCurrency[1]);
+							currency.setValue(decimalValue);
+	
+							Calendar calendar = Calendar.getInstance();
+							calendar.set(Calendar.YEAR, Integer.valueOf(year));
+							calendar.set(Calendar.MONTH, cell2.getColumn() - 2);
+							calendar.set(Calendar.DAY_OF_MONTH, 1);
+							calendar.set(Calendar.HOUR_OF_DAY, 0);
+							calendar.set(Calendar.MINUTE, 0);
+							calendar.set(Calendar.SECOND, 0);
+							currency.setDate(calendar.getTime());
+							
+							resultList.add(currency);
+						} else
+						{
+							onError(currencyCode + " cannot be split into two pieces");
+						}
 					}
 				}
 			}
