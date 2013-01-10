@@ -1,18 +1,16 @@
 package com.currencywarehouse.data;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.List;
 
-import jxl.Cell;
-import jxl.Sheet;
 import jxl.Workbook;
 import jxl.read.biff.BiffException;
 
 import org.apache.commons.lang3.StringUtils;
+
+import com.currencywarehouse.entities.Currency;
 
 /**
  * Loader łączy się z adresem
@@ -27,20 +25,21 @@ public class RemoteXLSCurrencyLoader extends AbstractErrorReporter implements Da
 
 	private DataInserter dataInserter;
 
+	private CurrencyXLSParser currencyXLSParser = new CurrencyXLSParser();
+
 	public static String url = "http://www.nbp.pl/kursy/archiwum/wagi_archiwum_";
-	
+
 	public static String[] years = { "1996", "1997", "1998", "1999", "2000", "2001", "2002" };
-	
+
 	@Override
 	public void loadData(DataInserter dataInserter) {
 		this.dataInserter = dataInserter;
-		
+
 		for (String year : years) {
 			fetchAndInsertFromRemoteXls(year);
 		}
 	}
 
-	
 	/**
 	 * Metoda łączy się z adresem
 	 * http://www.nbp.pl/kursy/archiwum/wagi_archiwum_year.xls gdzie year to rok
@@ -59,25 +58,22 @@ public class RemoteXLSCurrencyLoader extends AbstractErrorReporter implements Da
 		try {
 			currencyXlsUrl = new URL(url + year + ".xls");
 			URLConnection yc = currencyXlsUrl.openConnection();
-			
+
 			Workbook workbook = Workbook.getWorkbook(yc.getInputStream());
-			Sheet sheet = workbook.getSheet(0);
-			
-			Cell a7 = sheet.getCell(0,6); 
-			Cell b7 = sheet.getCell(1,6); 
-			Cell c7 = sheet.getCell(2,6); 
-			String stringa1 = a7.getContents(); 
-			String stringb7 = b7.getContents(); 
-			String stringc7 = c7.getContents();
-			
-			System.out.println(stringa1);
-			System.out.println(stringb7);
-			System.out.println(stringc7);
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (BiffException e) {
+
+			List<Currency> currencies = currencyXLSParser.getCurrencyValues(workbook, year);
+			if (!currencies.isEmpty()) {
+				dataInserter.beginInsert();
+				try {
+					for (Currency currency : currencies) {
+						dataInserter.insertCurrencyHistoryEntry(currency);
+					}
+				} finally {
+					dataInserter.endInsert();
+				}
+			}
+		} catch (IOException | BiffException e) {
+			onError(e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -88,5 +84,13 @@ public class RemoteXLSCurrencyLoader extends AbstractErrorReporter implements Da
 
 	public void setDataInserter(DataInserter dataInserter) {
 		this.dataInserter = dataInserter;
+	}
+
+	public CurrencyXLSParser getCurrencyXLSParser() {
+		return currencyXLSParser;
+	}
+
+	public void setCurrencyXLSParser(CurrencyXLSParser currencyXLSParser) {
+		this.currencyXLSParser = currencyXLSParser;
 	}
 }

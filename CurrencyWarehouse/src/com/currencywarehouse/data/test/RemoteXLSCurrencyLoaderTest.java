@@ -6,6 +6,9 @@ import org.junit.Test;
 import com.currencywarehouse.data.InMemoryDataInserter;
 import com.currencywarehouse.data.RemoteXLSCurrencyLoader;
 
+/**
+ * @author Monika Swoboda
+ */
 public class RemoteXLSCurrencyLoaderTest {
 
 	private RemoteXLSCurrencyLoader loader;
