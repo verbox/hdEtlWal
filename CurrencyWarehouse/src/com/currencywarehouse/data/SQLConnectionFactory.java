@@ -32,7 +32,10 @@ public class SQLConnectionFactory {
 				instance = DriverManager.getConnection(url, loginDialog.getLogin(), loginDialog.getPassword());
 				instance.setAutoCommit(false);
 			} catch (ClassNotFoundException | SQLException e) {
-				el.onError(e.getMessage());
+				if (el!=null) 
+				{
+					el.onError(e.getMessage());
+				}
 			}
 		}
 		return instance;
