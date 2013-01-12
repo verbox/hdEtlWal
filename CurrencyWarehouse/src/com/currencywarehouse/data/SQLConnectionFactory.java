@@ -3,6 +3,7 @@ package com.currencywarehouse.data;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Arrays;
 
 import javax.swing.JDialog;
 
@@ -10,6 +11,12 @@ import com.currencywarehouse.gui.LoginDialog;
 
 public class SQLConnectionFactory {
 	private static Connection instance;
+	private static ErrorListener el;
+
+	public static void setEl(ErrorListener el) {
+		SQLConnectionFactory.el = el;
+	}
+
 	public static synchronized Connection createConnection()
 	{
 		if(instance == null)
@@ -25,7 +32,7 @@ public class SQLConnectionFactory {
 				instance = DriverManager.getConnection(url, loginDialog.getLogin(), loginDialog.getPassword());
 				instance.setAutoCommit(false);
 			} catch (ClassNotFoundException | SQLException e) {
-				e.printStackTrace();
+				el.onError(e.getMessage());
 			}
 		}
 		return instance;
