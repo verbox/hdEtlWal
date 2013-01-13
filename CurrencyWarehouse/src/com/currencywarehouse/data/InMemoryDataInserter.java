@@ -26,5 +26,9 @@ public class InMemoryDataInserter implements DataInserter {
 			System.out.println(c.toString());
 		}
 	}
+	
+	public List<Currency> getCurrencies() {
+		return insertedCurrencies;
+	}
 
 }

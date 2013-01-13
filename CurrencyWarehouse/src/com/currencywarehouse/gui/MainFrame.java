@@ -28,6 +28,8 @@ import com.currencywarehouse.data.DataInserter;
 import com.currencywarehouse.data.DataLoader;
 import com.currencywarehouse.data.ETLComponentFactory;
 import com.currencywarehouse.data.SQLConnectionFactory;
+import com.currencywarehouse.entities.Currency;
+
 import javax.swing.JRadioButton;
 import java.awt.FlowLayout;
 import javax.swing.ButtonGroup;
@@ -45,6 +47,7 @@ public class MainFrame extends JFrame {
 	private JLabel lblConnectionState;
 	private JButton btnConnect;
 	private JButton btnETL;
+	private JButton btnMemory;
 	private JLabel lblProgress;
 	
 	private TextAreaErrorListener taerrorListener;
@@ -53,6 +56,9 @@ public class MainFrame extends JFrame {
 	private JRadioButton rdbtnOracleDatabase;
 	private final ButtonGroup buttonGroup = new ButtonGroup();
 	private final ButtonGroup buttonGroup_1 = new ButtonGroup();
+	
+	private SWorkerETL sw;
+	private CurrenciesFrame cf;
 	/**
 	 * Launch the application.
 	 */
@@ -142,9 +148,6 @@ public class MainFrame extends JFrame {
 		
 		Component verticalStrut_2 = Box.createVerticalStrut(20);
 		verticalBox_5.add(verticalStrut_2);
-		
-		JButton btnCancel = new JButton("Cancel");
-		verticalBox_5.add(btnCancel);
 		//LEFT PANEL
 		JPanel leftPanel = new JPanel();
 		leftPanel.setBorder(new TitledBorder(null, "Source", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -193,10 +196,28 @@ public class MainFrame extends JFrame {
 		rdbtnOracleDatabase.setEnabled(false);
 		verticalBox_3.add(rdbtnOracleDatabase);
 		
+		Component verticalStrut_3 = Box.createVerticalStrut(20);
+		verticalBox_3.add(verticalStrut_3);
+		
+		btnMemory = new JButton("Memory");
+
+		btnMemory.setEnabled(false);
+		btnMemory.setVisible(false);
+		verticalBox_3.add(btnMemory);
+		
 		//actions
 		btnETL.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				clickETLButton(arg0,progressBar);
+				resetETLWorker();
+				clickETLButton(arg0);
+			}
+		});
+		
+		btnMemory.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				if (cf!=null) {
+					cf.setVisible(true);
+				}
 			}
 		});
 		
@@ -206,7 +227,7 @@ public class MainFrame extends JFrame {
 	
 	public void clickConnectButton(ActionEvent arg0) {
 		//i will use SwingWorker class - it automatically works with EDT, threads etc.
-		SwingWorker<Connection,String> sw = new SwingWorker<Connection,String>() {
+		SwingWorker<Connection,String> swc = new SwingWorker<Connection,String>() {
 
 			@Override
 			protected Connection doInBackground() throws Exception {
@@ -215,11 +236,11 @@ public class MainFrame extends JFrame {
 				SQLConnectionFactory.setErrorListener(taerrorListener);
 				Connection con = SQLConnectionFactory.createConnection();
 				if (con != null) {
-					publish("Connection succesfull!\n");
+					publish("Connection succesfull!");
 					lblConnectionState.setText("<html><font color=green><b>OK</b></font></html>");
 					rdbtnOracleDatabase.setEnabled(true);
 				} else {
-					publish("Connection error! Please read error messages above.\n");
+					publish("Connection error! Please read error messages above.");
 					lblConnectionState.setText("<html><font color=red><b>Not connected</b></font></html>");
 				}
 				btnConnect.setEnabled(true);
@@ -234,11 +255,11 @@ public class MainFrame extends JFrame {
 			}
 			
 		};
-		sw.execute();
+		swc.execute();
 		
 	}
 	
-	public void clickETLButton(ActionEvent arg0, final JProgressBar jpbar) {
+	public void clickETLButton(ActionEvent arg0) {
 		final DataLoader dl = ETLComponentFactory.getLoader(getSelectedButtonId(buttonGroup));
 		final DataInserter di = ETLComponentFactory.getInserter(getSelectedButtonId(buttonGroup_1));
 		try {
@@ -248,7 +269,6 @@ public class MainFrame extends JFrame {
 		catch (ClassCastException ex) {
 			addMessageToOutput(ex.getMessage());
 		}
-		SWorkerETL sw = new SWorkerETL(this,btnETL,lblProgress,jpbar);
 		sw.setETLElements(dl, di);
 		sw.execute();
 	}
@@ -269,7 +289,16 @@ public class MainFrame extends JFrame {
 		textAreaOutput.append(str+"\n");
 	}
 	
-	public synchronized void updateProgressBar() {		
+	public void resetETLWorker() {
+		sw = new SWorkerETL(this,btnETL,lblProgress,progressBar);
+	}
+	
+	public void prepareListOfCurrenciesFrame(List<Currency> list) {
+		if (list!=null) {
+			cf = new CurrenciesFrame(list);
+			btnMemory.setVisible(true);
+			btnMemory.setEnabled(true);
+		}
 	}
 	
 }
