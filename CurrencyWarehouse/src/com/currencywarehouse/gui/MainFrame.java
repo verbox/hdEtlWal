@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
@@ -24,16 +23,13 @@ import javax.swing.Box;
 import javax.swing.JTextArea;
 import javax.swing.JScrollPane;
 
+import com.currencywarehouse.data.AbstractErrorReporter;
 import com.currencywarehouse.data.DataInserter;
 import com.currencywarehouse.data.DataLoader;
 import com.currencywarehouse.data.ETLComponentFactory;
-import com.currencywarehouse.data.ErrorListener;
 import com.currencywarehouse.data.SQLConnectionFactory;
-import javax.swing.GroupLayout;
-import javax.swing.GroupLayout.Alignment;
 import javax.swing.JRadioButton;
 import java.awt.FlowLayout;
-import java.awt.Font;
 import javax.swing.ButtonGroup;
 import javax.swing.JProgressBar;
 
@@ -44,13 +40,16 @@ public class MainFrame extends JFrame {
 	 */
 	private static final long serialVersionUID = -3963727338601934118L;
 	private JPanel contentPane;
-	private LoginDialog loginDialog;
 	
 	private JTextArea textAreaOutput;
 	private JLabel lblConnectionState;
 	private JButton btnConnect;
 	private JButton btnETL;
+	private JLabel lblProgress;
 	
+	private TextAreaErrorListener taerrorListener;
+	
+	private JProgressBar progressBar;
 	private JRadioButton rdbtnOracleDatabase;
 	private final ButtonGroup buttonGroup = new ButtonGroup();
 	private final ButtonGroup buttonGroup_1 = new ButtonGroup();
@@ -75,7 +74,6 @@ public class MainFrame extends JFrame {
 	 */
 	public MainFrame() {
 		//construct children
-		loginDialog = new LoginDialog();
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 775, 477);
 		contentPane = new JPanel();
@@ -128,22 +126,25 @@ public class MainFrame extends JFrame {
 		Box verticalBox_5 = Box.createVerticalBox();
 		middlePanel.add(verticalBox_5);
 		
+		progressBar = new JProgressBar();
 		btnETL = new JButton("Extract, Transform and Load");
-		btnETL.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				clickETLButton(arg0);
-			}
-		});
+
 		verticalBox_5.add(btnETL);
 		
 		Component verticalStrut_1 = Box.createVerticalStrut(20);
 		verticalBox_5.add(verticalStrut_1);
 		
-		JLabel lblProgress = new JLabel("Progress:");
+		lblProgress = new JLabel("Progress:");
 		verticalBox_5.add(lblProgress);
 		
-		JProgressBar progressBar = new JProgressBar();
+		
 		verticalBox_5.add(progressBar);
+		
+		Component verticalStrut_2 = Box.createVerticalStrut(20);
+		verticalBox_5.add(verticalStrut_2);
+		
+		JButton btnCancel = new JButton("Cancel");
+		verticalBox_5.add(btnCancel);
 		//LEFT PANEL
 		JPanel leftPanel = new JPanel();
 		leftPanel.setBorder(new TitledBorder(null, "Source", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -191,6 +192,16 @@ public class MainFrame extends JFrame {
 		buttonGroup_1.add(rdbtnOracleDatabase);
 		rdbtnOracleDatabase.setEnabled(false);
 		verticalBox_3.add(rdbtnOracleDatabase);
+		
+		//actions
+		btnETL.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				clickETLButton(arg0,progressBar);
+			}
+		});
+		
+		//error listener
+		taerrorListener = new TextAreaErrorListener(textAreaOutput);
 	}
 	
 	public void clickConnectButton(ActionEvent arg0) {
@@ -201,7 +212,7 @@ public class MainFrame extends JFrame {
 			protected Connection doInBackground() throws Exception {
 				btnConnect.setEnabled(false);
 				publish("Connection progress...");
-				SQLConnectionFactory.setEl(new TextAreaErrorListener(textAreaOutput));
+				SQLConnectionFactory.setErrorListener(taerrorListener);
 				Connection con = SQLConnectionFactory.createConnection();
 				if (con != null) {
 					publish("Connection succesfull!\n");
@@ -227,25 +238,22 @@ public class MainFrame extends JFrame {
 		
 	}
 	
-	public void clickETLButton(ActionEvent arg0) {
-		final DataLoader dt = ETLComponentFactory.getLoader(getSelectedButtonId(buttonGroup));
+	public void clickETLButton(ActionEvent arg0, final JProgressBar jpbar) {
+		final DataLoader dl = ETLComponentFactory.getLoader(getSelectedButtonId(buttonGroup));
 		final DataInserter di = ETLComponentFactory.getInserter(getSelectedButtonId(buttonGroup_1));
-		SwingWorker<Void,String> sw = new SwingWorker<Void,String>() {
-
-			@Override
-			protected Void doInBackground() throws Exception {
-				btnETL.setEnabled(false);
-				dt.loadData(di);
-				addMessageToOutput("ETL operations completed!");
-				btnETL.setEnabled(true);
-				return null;
-			}
-			
-		};
+		try {
+			AbstractErrorReporter errorReporter = (AbstractErrorReporter) dl;
+			errorReporter.addErrorListener(taerrorListener);
+		}
+		catch (ClassCastException ex) {
+			addMessageToOutput(ex.getMessage());
+		}
+		SWorkerETL sw = new SWorkerETL(this,btnETL,lblProgress,jpbar);
+		sw.setETLElements(dl, di);
 		sw.execute();
 	}
 	
-	private int getSelectedButtonId(ButtonGroup bg) {
+	public int getSelectedButtonId(ButtonGroup bg) {
 		int number = -1;
 		for (Enumeration<AbstractButton> buttons = bg.getElements(); buttons.hasMoreElements();) {
             AbstractButton button = buttons.nextElement();
@@ -257,7 +265,11 @@ public class MainFrame extends JFrame {
 		return -1;
 	}
 	
-	private synchronized void addMessageToOutput(String str) {
-		textAreaOutput.append(str);
+	public synchronized void addMessageToOutput(String str) {
+		textAreaOutput.append(str+"\n");
 	}
+	
+	public synchronized void updateProgressBar() {		
+	}
+	
 }

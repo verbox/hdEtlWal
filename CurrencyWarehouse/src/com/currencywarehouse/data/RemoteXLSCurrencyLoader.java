@@ -24,6 +24,11 @@ import com.currencywarehouse.entities.Currency;
 public class RemoteXLSCurrencyLoader extends AbstractErrorReporter implements DataLoader {
 
 	private DataInserter dataInserter;
+	private WorkListener workListener = new EmptyWorkListener();
+	
+	public void setWorkListener(WorkListener workListener) {
+		this.workListener = workListener;
+	}
 
 	private CurrencyXLSParser currencyXLSParser = new CurrencyXLSParser();
 
@@ -34,9 +39,10 @@ public class RemoteXLSCurrencyLoader extends AbstractErrorReporter implements Da
 	@Override
 	public void loadData(DataInserter dataInserter) {
 		this.dataInserter = dataInserter;
-
+		workListener.countAllTasks(years.length);
 		for (String year : years) {
 			fetchAndInsertFromRemoteXls(year);
+			workListener.doneTask("XLS: Done ETL operations for year: "+year);
 		}
 	}
 

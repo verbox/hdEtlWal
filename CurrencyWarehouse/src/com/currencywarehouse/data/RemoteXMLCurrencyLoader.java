@@ -20,14 +20,21 @@ import com.currencywarehouse.entities.Currency;
 public class RemoteXMLCurrencyLoader extends AbstractErrorReporter implements DataLoader {
 
 	private DataInserter dataInserter;
+	private WorkListener workListener = new EmptyWorkListener();
 	
+	public void setWorkListener(WorkListener workListener) {
+		this.workListener = workListener;
+	}
+
 	@Override
 	public void loadData(DataInserter dataInserter) {
 		this.dataInserter = dataInserter;
 		List<String> dirs = downloadDirectories();
+		workListener.countAllTasks(dirs.size());
 		for(String dir: dirs)
 		{
 			fetchAndInsertFromURL(dir);
+			workListener.doneTask("Done ETL operations: "+dir);
 		}
 	}
 	

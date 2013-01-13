@@ -13,7 +13,7 @@ public class SQLConnectionFactory {
 	private static Connection instance;
 	private static ErrorListener el;
 
-	public static void setEl(ErrorListener el) {
+	public static void setErrorListener(ErrorListener el) {
 		SQLConnectionFactory.el = el;
 	}
 
